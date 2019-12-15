@@ -35,7 +35,18 @@ class App extends Component {
       box: {},
       route: 'signin',
       isSignedIn: false,
+      user: {
+        email: '',
+        id: '',
+        name: '',
+        entries: 0,
+        joined: ''
+      }
     }
+  }
+
+  loadUser = (user) => {
+    this.setState({user})
   }
 
   calculateFaceLocation = data => {
@@ -63,11 +74,25 @@ class App extends Component {
     this.setState({ imageUrl: this.state.input })
     app.models
       .predict(Clarifai.FACE_DETECT_MODEL, this.state.input)
-      .then(response =>
-        this.displayFaceBox(this.calculateFaceLocation(response)),
+      .then(response =>{
+        if(response){
+          fetch('http://localhost:4000/image',{
+            method: 'put',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              id: this.state.user.id
+            })
+          }).then(response => response.json())
+          .then(count => {
+            this.setState(Object.assign(this.state.user, { entries: count}))
+          })
+        }
+        this.displayFaceBox(this.calculateFaceLocation(response))
+        }
       )
       .catch(err => console.log(err))
   }
+
   onRouteChange = route => {
     if (route === 'signin') {
       this.setState({ isSignedIn: false })
@@ -88,7 +113,7 @@ class App extends Component {
         {this.state.route === 'home' ? (
           <div>
             <Logo />
-            <Rank />
+            <Rank user={this.state.user} />
             <ImageLinkForm
               onInputChange={this.onInputChange}
               onButtonSubmit={this.onButtonSubmit}
@@ -99,9 +124,9 @@ class App extends Component {
             />
           </div>
         ) : this.state.route === 'signin' ? (
-          <SignIn onRouteChange={this.onRouteChange} />
+          <SignIn onRouteChange={this.onRouteChange} loadUser={this.loadUser} />
         ) : (
-          <Register onRouteChange={this.onRouteChange} />
+          <Register onRouteChange={this.onRouteChange} loadUser={this.loadUser} />
         )}
       </div>
     )
